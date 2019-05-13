@@ -11,8 +11,8 @@
   "module": "lib/index.es.js",
   "types": "lib/index.d.ts",
   "files": [
-    "**/*.js",
-    "**/*.ts"
+    "**/*.jsx?",
+    "**/*.tsx?"
   ],
   "scripts": {
     "test": "jest",
