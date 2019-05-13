@@ -1,16 +1,15 @@
-import React, { useReducer, ReactElement } from 'react'
+import { useReducer, ReactElement } from 'react'
 
 import { isPromise } from './isPromise'
 import { isAbsolute, join, formalize } from './join'
 import {
   MatchResult,
   DaggerboardContext,
-  Router,
   Route,
   MatchRequest,
   AsyncMatchResult,
 } from './types'
-import { createContext, useContext, useRef } from 'react'
+import { useRef } from 'react'
 import pathToRegexp from 'path-to-regexp'
 
 function interpretRoute(
@@ -109,7 +108,7 @@ function pickRoute(
   }
 }
 
-function matchRoute(
+export function matchRoute(
   request: MatchRequest,
   ctx: DaggerboardContext,
 ): AsyncMatchResult {
@@ -128,114 +127,7 @@ function assignRoute(
   }
 }
 
-export const GlobalRoutingContext = createContext<DaggerboardContext>({} as any)
-export const LocalRoutingContext = createContext<MatchResult>({} as any)
-
-export function useHistory() {
-  const ctx = useContext(GlobalRoutingContext)
-  const match = useContext(LocalRoutingContext)
-
-  return {
-    push(path: string) {
-      ctx.history.push(resolvePath(path, match))
-    },
-    replace(path: string) {
-      ctx.history.replace(resolvePath(path, match))
-    },
-    goBack: ctx.history.goBack,
-    goForward: ctx.history.goForward,
-    location: ctx.history.location,
-    block: ctx.history.block,
-    params: match.params,
-  }
-}
-
-type Match = MatchResult
-type AsyncMatch = Match | Promise<Match>
-
-// For optimization, the rule needs to be that this ONLY
-// cares to recheck stuff when the outerMatch updates.
-// When outerMatch updates, the whole thing cycles.
-// Else, it will just return the latest match it has.
-// The root service provider will have a hook that watches
-// the actual provided context.
-export function useRouter(router: Router): React.ReactElement {
-  const ctx = useContext(GlobalRoutingContext)
-  const outerMatch = useContext(LocalRoutingContext)
-  const outerMatchChanged = useDidChange(outerMatch)
-
-  const forceUpdate = useForceUpdate()
-
-  const { replace } = useHistory()
-
-  let nextInnerMatch: AsyncMatch
-
-  const lastInnerMatchRef = useRef<Match>({
-    ...outerMatch,
-    route: null,
-  })
-
-  if (outerMatchChanged) {
-    nextInnerMatch = matchRoute(
-      {
-        ...outerMatch,
-        localMatch: '',
-        router,
-      },
-      ctx,
-    )
-  } else {
-    nextInnerMatch = lastInnerMatchRef.current
-  }
-
-  if (isPromise(nextInnerMatch)) {
-    const lastInnerMatch = lastInnerMatchRef.current
-    nextInnerMatch.then(innerMatch => {
-      if (lastInnerMatch === lastInnerMatchRef.current) {
-        if (typeof innerMatch.route == 'string') {
-          if (innerMatch.route !== ctx.currentPath) {
-            replace(innerMatch.route)
-          }
-        } else {
-          lastInnerMatchRef.current = innerMatch
-          forceUpdate()
-        }
-      }
-    })
-  } else {
-    if (typeof nextInnerMatch.route == 'string') {
-      if (nextInnerMatch.route !== ctx.currentPath) {
-        replace(nextInnerMatch.route)
-      }
-    } else {
-      lastInnerMatchRef.current = nextInnerMatch
-    }
-  }
-
-  return (
-    <LocalRoutingContext.Provider value={lastInnerMatchRef.current}>
-      {lastInnerMatchRef.current.route}
-    </LocalRoutingContext.Provider>
-  )
-}
-
-const constant = {}
-export function useDidChange<T>(nextValue: T) {
-  const lastValue = useRef(constant)
-  if (lastValue.current !== nextValue) {
-    lastValue.current = nextValue
-    return true
-  } else {
-    return false
-  }
-}
-
-export function useForceUpdate() {
-  const [, forceUpdate] = useReducer(i => ++i, 0)
-  return forceUpdate as () => void
-}
-
-function resolvePath(path: string, request: MatchRequest) {
+export function resolvePath(path: string, request: MatchRequest) {
   if (isAbsolute(path)) {
     return path
   } else {
@@ -247,4 +139,20 @@ function resolvePath(path: string, request: MatchRequest) {
       path,
     )
   }
+}
+
+const constant = {}
+export function useDidChange(nextValue: unknown) {
+  const lastValue = useRef(constant as any)
+  if (lastValue.current !== nextValue) {
+    lastValue.current = nextValue
+    return true
+  } else {
+    return false
+  }
+}
+
+export function useForceUpdate() {
+  const [, forceUpdate] = useReducer(i => ++i, 0)
+  return forceUpdate as () => void
 }

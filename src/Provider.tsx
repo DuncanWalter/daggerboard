@@ -1,11 +1,8 @@
 import React, { ReactElement, useMemo, ReactNode, useEffect } from 'react'
 import { History } from 'history'
 import { DaggerboardContext, MatchResult } from './types'
-import {
-  useForceUpdate,
-  LocalRoutingContext,
-  GlobalRoutingContext,
-} from './push'
+import { useForceUpdate } from './routes'
+import { GlobalRoutingContext, LocalRoutingContext } from './contexts'
 
 interface ProviderProps {
   history: History

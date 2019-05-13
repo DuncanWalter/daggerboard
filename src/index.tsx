@@ -1,5 +1,4 @@
-import { Provider } from './Provider'
-import { useHistory, useRouter } from './push'
-
-export { Provider }
-export { useHistory, useRouter }
+export { Provider } from './Provider'
+export { useHistory } from './useHistory'
+export { useRouter } from './useRouter'
+export * from './types'

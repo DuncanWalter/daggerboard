@@ -1,4 +1,4 @@
-# Routing Library
+# daggerboard
 
 > Declarative routing that just works.
 
@@ -68,7 +68,9 @@ Written in TypeScript and shipped with type definitions.
 
 - exact vs loose matches ✅
 - hook for url information ✅
-- prevent potential errors caused by async mutation with promises
-- allow for recovery from null routes for more intuitive use
-- hook into store support? Maybe not useful...
-- exact helper function?
+- prevent potential errors caused by async mutation with promises ✅
+- allow for recovery from null routes for more intuitive use ✅
+- get real tests up and running again
+- exact helper function
+- unstack recursion for trace reading
+- clean up code some more (still an early draft)
