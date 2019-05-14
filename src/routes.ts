@@ -1,6 +1,6 @@
 import { useReducer, ReactElement } from 'react'
 
-import { isPromise } from './isPromise'
+import { isPromise, unSync } from './isPromise'
 import { isAbsolute, join, formalize } from './join'
 import {
   MatchResult,
@@ -46,66 +46,54 @@ function pickRoute(
   ctx: DaggerboardContext,
 ): AsyncMatchResult {
   const { router, path } = request
-  const [casePath, ...rest] = cases
 
-  if (!rest.length) {
-    return assignRoute(null, request)
-  }
-
-  const keys: pathToRegexp.Key[] = []
-  const pattern = pathToRegexp(`${formalize(casePath)}`, keys, {
-    end: false,
-  })
-  const parse = pattern.exec(path)
-  if (parse) {
-    const [match, ...parameters] = parse
-
-    const route = router[casePath]
-
-    const combinedParams = {
-      ...request.params,
-      ...parameters.reduce(
-        (acc, param, i) => {
-          acc[keys[i].name] = param
-          return acc
-        },
-        {} as { [param: string]: string },
-      ),
-    }
-
-    const innerRequest = {
-      router: request.router,
-      path: path.slice(match.length),
-      globalMatch: `${request.globalMatch}${match}`,
-      localMatch: match,
-      params: combinedParams,
-      parent: request,
-    }
-
-    const result = interpretRoute(route, innerRequest, ctx)
-
-    if (isPromise(result)) {
-      return result.then(route => {
-        if (route === null) {
-          return pickRoute(rest, request, ctx)
-        } else {
-          return result
-        }
+  return visit(
+    cases,
+    (casePath, next) => {
+      const keys: pathToRegexp.Key[] = []
+      const pattern = pathToRegexp(`${formalize(casePath)}`, keys, {
+        end: false,
       })
-    } else {
-      if (result.route === null) {
-        return pickRoute(rest, request, ctx)
+      const parse = pattern.exec(path)
+      if (parse) {
+        const [match, ...parameters] = parse
+
+        const route = router[casePath]
+
+        const combinedParams = {
+          ...request.params,
+          ...parameters.reduce(
+            (acc, param, i) => {
+              acc[keys[i].name] = param
+              return acc
+            },
+            {} as { [param: string]: string },
+          ),
+        }
+
+        const innerRequest = {
+          router: request.router,
+          path: path.slice(match.length),
+          globalMatch: `${request.globalMatch}${match}`,
+          localMatch: match,
+          params: combinedParams,
+        }
+
+        const result = interpretRoute(route, innerRequest, ctx)
+
+        return unSync(result, result => {
+          if (result.route === null) {
+            return next()
+          } else {
+            return result
+          }
+        })
       } else {
-        return result
+        return next()
       }
-    }
-  } else {
-    if (rest.length) {
-      return pickRoute(rest, request, ctx)
-    } else {
-      return assignRoute(null, request)
-    }
-  }
+    },
+    assignRoute(null, request) as AsyncMatchResult,
+  )
 }
 
 export function matchRoute(
@@ -155,4 +143,16 @@ export function useDidChange(nextValue: unknown) {
 export function useForceUpdate() {
   const [, forceUpdate] = useReducer(i => ++i, 0)
   return forceUpdate as () => void
+}
+
+function visit<T, U>(
+  items: T[],
+  visit: (item: T, next: () => U) => U,
+  base: U,
+): U {
+  let i = 0
+  function next(): U {
+    return visit(items[i++], i == items.length ? () => base : next)
+  }
+  return next()
 }

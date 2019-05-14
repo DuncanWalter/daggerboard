@@ -5,12 +5,6 @@ import { useDidChange, useForceUpdate, matchRoute } from './routes'
 import { MatchResult, Router } from './types'
 import { isPromise } from './isPromise'
 
-// For optimization, the rule needs to be that this ONLY
-// cares to recheck stuff when the outerMatch updates.
-// When outerMatch updates, the whole thing cycles.
-// Else, it will just return the latest match it has.
-// The root service provider will have a hook that watches
-// the actual provided context.
 export function useRouter(router: Router): React.ReactElement {
   const ctx = useContext(GlobalRoutingContext)
   const outerMatch = useContext(LocalRoutingContext)
