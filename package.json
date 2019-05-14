@@ -1,6 +1,6 @@
 {
   "name": "daggerboard",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "sideEffects": false,
   "description": "lightweight, capable routing utilities for modern React",
   "keywords": [
